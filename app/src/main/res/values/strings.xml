@@ -1,14 +1,24 @@
 <resources>
+    <!-- Main -->
     <string name="app_name">AndroidSPU121</string>
-    <string name="main_tv_hello_text">Hello World!</string>
-    <string name="main_button_hello_text">Derpe Calculator</string>
+    <string name="main_tv_heading">Derpe Android</string>
+    <string name="main_button_calc">Derpe Calculator</string>
+    <string name="main_button_game">2048</string>
 
+    <!-- 2048 -->
+    <string name="game_tv_title">2048</string>
+    <string name="game_tv_hint">З\'єднуйте числа збираючи 2048</string>
+    <string name="game_tv_score">РАХУНОК\n%d</string>
+    <string name="game_tv_best">РЕКОРД\n%d</string>
+    <string name="game_btn_new">НОВА</string>
+    <string name="game_btn_undo">НАЗАД</string>
+
+    <!-- Calculator -->
     <string name="calc_title">Calculator</string>
     <string name="calc_btn_percent">%</string>
     <string name="calc_btn_c">C</string>
     <string name="calc_btn_ce">CE</string>
     <string name="calc_btn_backspace">\u232B</string>
-
     <string name="calc_btn_inverse">\u00B9/\u2093</string>
     <string name="calc_btn_square">x\u00B2</string>
     <string name="calc_btn_sqrt">\u221A\u2093\u0304</string>

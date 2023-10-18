@@ -9,8 +9,8 @@ import android.widget.Button;
 import android.widget.TextView;
 
 public class MainActivity extends AppCompatActivity {
-    private TextView tvHello;
-    private Button btnHello;
+    // private TextView tvHeading;
+    private Button btnCalc;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -19,16 +19,21 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         // View - пробатько всіх UI елементів
-        tvHello = findViewById(R.id.main_tv_hello);
-        tvHello.setText(R.string.main_tv_hello_text);
+        // tvHeading = findViewById(R.id.main_tv_hello);
+        // tvHeading.setText(R.string.main_tv_heading);
 
-        btnHello = findViewById(R.id.main_button_hello);
-        btnHello.setOnClickListener(this::helloClick);
+        btnCalc = findViewById(R.id.main_button_calc);
+        btnCalc.setOnClickListener(this::calcClick);
+
+        findViewById(R.id.main_button_game).setOnClickListener(this::startGame);
     }
 
-    private void helloClick(View view) {    // Всі обробники подій повинні мати такий прототип, view - sender
-        tvHello.setText(tvHello.getText() + "!");
-        Intent calcIntent = new Intent(this.getApplicationContext(), CalcActivity.class);
-        startActivity(calcIntent);
+    private void calcClick(View view) {    // Всі обробники подій повинні мати такий прототип, view - sender
+        // tvHeading.setText(tvHeading.getText() + "!");
+        startActivity(new Intent(this.getApplicationContext(), CalcActivity.class));
+    }
+
+    private void startGame(View view) {
+        startActivity(new Intent(this.getApplicationContext(), GameActivity.class));
     }
 }

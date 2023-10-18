@@ -12,7 +12,7 @@
         android:id="@+id/main_tv_hello"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/main_tv_hello_text"
+        android:text="@string/main_tv_heading"
         android:textSize="17dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
@@ -37,8 +37,19 @@
             android:layout_weight="1">
 
             <Button
-                android:id="@+id/main_button_hello"
-                android:text="@string/main_button_hello_text"
+                android:id="@+id/main_button_calc"
+                android:text="@string/main_button_calc"
+                style="@style/main_btn" />
+        </TableRow>
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1">
+
+            <Button
+                android:id="@+id/main_button_game"
+                android:text="@string/main_button_game"
                 style="@style/main_btn" />
         </TableRow>
     </TableLayout>

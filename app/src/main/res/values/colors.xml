@@ -2,11 +2,47 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
-    <color name="calc_layout_background">#f7f2ed</color>
-    <color name="calc_text">#1a1a1a</color>
+
+    <!-- Calculator -->
+    <color name="calc_layout_background">#202020</color>
+    <color name="calc_text">#FEFEFE</color>
     <color name="calc_expression_text">#929292</color>
     <color name="calc_btn_func">#323232</color>
     <color name="calc_btn_digit">#3B3B3B</color>
-    <color name="calc_btn_equal">#4CC2FE</color>
-    <color name="calc_btn_equal_text">#3a5a6e</color>
+    <color name="calc_btn_equal">#4CC1FE</color>
+    <color name="calc_btn_equal_text">#215570</color>
+
+    <!-- 2048 -->
+    <color name="game_title_background">#ECC962</color>
+    <color name="game_title_foreground">#F8EFF6</color>
+    <color name="game_btn_background">#F85C3D</color>
+    <color name="game_btn_foreground">#F7F6F1</color>
+    <color name="game_score_background">#3E3933</color>
+    <color name="game_score_foreground">#FCF4F4</color>
+
+    <color name="game_field_background">#A49080</color>
+    <color name="game_cell_foreground_0">#C0AE9D</color>
+    <color name="game_cell_background_0">#C0AE9D</color>
+    <color name="game_cell_foreground_2">#796D66</color>
+    <color name="game_cell_background_2">#EFE3DB</color>
+    <color name="game_cell_foreground_4">#7A6D68</color>
+    <color name="game_cell_background_4">#EDE0CE</color>
+    <color name="game_cell_foreground_8">#FFFFFFFF</color>
+    <color name="game_cell_background_8">#F4B17F</color>
+    <color name="game_cell_foreground_16">#FFFFFFFF</color>
+    <color name="game_cell_background_16">#f59563</color>
+    <color name="game_cell_foreground_32">#FFFFFFFF</color>
+    <color name="game_cell_background_32">#f67c5f</color>
+    <color name="game_cell_foreground_64">#FFFFFFFF</color>
+    <color name="game_cell_background_64">#f65e3b</color>
+    <color name="game_cell_foreground_128">#FFFFFFFF</color>
+    <color name="game_cell_background_128">#edcf72</color>
+    <color name="game_cell_foreground_256">#FFFFFFFF</color>
+    <color name="game_cell_background_256">#edcc61</color>
+    <color name="game_cell_foreground_512">#FFFFFFFF</color>
+    <color name="game_cell_background_512">#eed278</color>
+    <color name="game_cell_foreground_1024">#FFFFFFFF</color>
+    <color name="game_cell_background_1024">#eecf6b</color>
+    <color name="game_cell_foreground_2048">#FFFFFFFF</color>
+    <color name="game_cell_background_2048">#eecd5f</color>
 </resources>
