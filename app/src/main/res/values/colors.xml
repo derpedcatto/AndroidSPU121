@@ -3,6 +3,14 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
 
+    <!-- Chat -->
+    <color name="chat_msg_mine_background">#E8D6A0</color>
+    <color name="chat_msg_other_background">#62ECD0</color>
+    <color name="chat_msg_mine_border">#98F1EE</color>
+    <color name="chat_msg_other_border">#ECC962</color>
+    <color name="chat_notif_unread_background">#ef3939</color>
+    <color name="chat_notif_unread_foreground">#FFFFFF</color>
+
     <!-- Calculator -->
     <color name="calc_layout_background">#202020</color>
     <color name="calc_text">#FEFEFE</color>

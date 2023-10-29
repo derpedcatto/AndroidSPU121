@@ -14,6 +14,7 @@
         <item name="android:layout_weight">1</item>
         <item name="android:layout_width">0dp</item>
         <item name="android:textSize">22sp</item>
+        <item name="android:textColor">@color/calc_text</item>
         <item name="backgroundTint">@null</item>
     </style>
     <style name="calc_btn_func" parent="calc_btn">

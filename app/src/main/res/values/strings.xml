@@ -4,6 +4,12 @@
     <string name="main_tv_heading">Derpe Android</string>
     <string name="main_button_calc">Derpe Calculator</string>
     <string name="main_button_game">2048</string>
+    <string name="main_button_chat">Чат</string>
+
+    <!-- Chat -->
+    <string name="chat_tv_title">Комунікатор</string>
+    <string name="chat_tv_nick">Нік у чаті:</string>
+    <string name="chat_et_nick">DNS</string>
 
     <!-- 2048 -->
     <string name="game_tv_title">2048</string>

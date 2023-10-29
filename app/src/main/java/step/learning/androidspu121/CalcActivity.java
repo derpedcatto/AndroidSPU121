@@ -4,134 +4,52 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.os.Bundle;
-import android.util.Log;
-import android.view.View;
-import android.widget.Button;
 import android.widget.TextView;
 
+import java.math.RoundingMode;
+import java.text.DecimalFormat;
+import java.util.HashMap;
+import java.util.Map;
+
+// https://github.com/pH-7/Simple-Java-Calculator/blob/master/src/simplejavacalculator/Calculator.java
+
 public class CalcActivity extends AppCompatActivity {
+    //region Variables
     private TextView tvExpression;
     private TextView tvResult;
+
+    private double num1;
+    private double num2;
+    //endregion
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_calc);
 
+        num1 = 0;
+        num2 = 0;
+
         tvExpression = findViewById(R.id.calc_tv_expression);
         tvResult = findViewById(R.id.calc_tv_result);
-        clearClick(null);
 
-        findViewById(R.id.calc_btn_backspace).setOnClickListener(this::backspaceClick);
-        findViewById(R.id.calc_btn_c).setOnClickListener(this::clearClick);
-        findViewById(R.id.calc_btn_ce).setOnClickListener(this::clearEntryClick);
-        findViewById(R.id.calc_btn_plus_minus).setOnClickListener(this::plusMinusClick);
-        findViewById(R.id.calc_btn_comma).setOnClickListener(this::commaClick);
+
+        // clearClick(null);
+        // findViewById(R.id.calc_btn_backspace).setOnClickListener(this::backspaceClick);
 
         // Пройти циклом по ідентифікаторах calc_btn_[i], всім вказати один обробник
-        for (int i = 0; i < 10; i++) {
-            findViewById(
-                    getResources()
-                        .getIdentifier( // R.
-                            "calc_btn_" + i,
-                            "id",    // R.id.calc_btn_[i]
-                            getPackageName()
-                    )
-            ).setOnClickListener(this::digitClick);
-        }
+        // for (int i = 0; i < 10; i++) {
+        //     findViewById(
+        //             getResources()
+        //                 .getIdentifier( // R.
+        //                     "calc_btn_" + i,
+        //                     "id",    // R.id.calc_btn_[i]
+        //                     getPackageName()
+        //             )
+        //     ).setOnClickListener(this::digitClick);
+        // }
     }
-
-    /**
-     * Click on '0' - '9'
-     */
-    private void digitClick(View view) {
-        String result = tvResult.getText().toString();
-        if (result.equals( getString( R.string.calc_btn_0 ))) {
-            result = ( (Button) view ).getText().toString();
-        }
-        else {
-            result += ( (Button) view).getText();
-        }
-        tvResult.setText(result);
-    }
-
-    /**
-     * Click on 'C'
-     */
-    private void clearClick(View view) {
-        tvExpression.setText("");
-        tvResult.setText(R.string.calc_btn_0);
-    }
-
-    /**
-     * Click on 'CE'
-     */
-    private void clearEntryClick(View view) {
-        tvResult.setText(R.string.calc_btn_0);
-    }
-
-    /**
-     * Click on Backspace
-     */
-    private void backspaceClick(View view) {
-        CharSequence result = tvResult.getText();
-
-        if (result.length() == 2 && result.charAt(0) == '-') {
-            result = new StringBuilder(getString(R.string.calc_btn_0));
-        }
-        else if (result.length() > 1) {
-            result = result.subSequence(0, result.length() - 1);
-        }
-        else {
-            result = new StringBuilder(getString(R.string.calc_btn_0));
-        }
-
-        tvResult.setText(result);
-    }
-
-    /**
-     * Click on ','
-     */
-    private void commaClick(View view) {
-        boolean commaAbsent = true;
-        CharSequence text = tvResult.getText();
-        char commaChar = getString( R.string.calc_btn_comma ).charAt(0);
-
-        for (int i = 0; i < tvResult.length(); i++) {
-            if (text.charAt(i) == commaChar) {
-                commaAbsent = false;
-                break;
-            }
-        }
-
-        if (commaAbsent) {
-            tvResult.setText(new StringBuilder().append(text).append(commaChar));
-        }
-    }
-
-    /**
-     * Click on '+/-'
-     */
-    private void plusMinusClick(View view) {
-        if (tvResult.getText().charAt(0) == getString(R.string.calc_btn_0).charAt(0)) {
-            return;
-        }
-
-        CharSequence result = tvResult.getText();
-
-        if (result.charAt(0) == '-') {
-            result = new StringBuilder(result).deleteCharAt(0);
-        }
-        else {
-            result = new StringBuilder().append('-').append(result);
-        }
-
-        tvResult.setText(result);
-    }
-
-
-
-
 
     /*
     Зміна конфігурації
@@ -153,4 +71,22 @@ public class CalcActivity extends AppCompatActivity {
         tvExpression.setText(savedInstanceState.getCharSequence("expression"));
         tvResult.setText(savedInstanceState.getCharSequence("result"));
     }
+
+
+
+
+
+
+
+
+
+    //region Utility
+    private String formatDouble(double number) {
+        DecimalFormat decimalFormat = new DecimalFormat("#,##0.0#");
+        decimalFormat.setRoundingMode(RoundingMode.HALF_UP);
+        return decimalFormat.format(number);
+    }
+    //endregion
 }
+
+
