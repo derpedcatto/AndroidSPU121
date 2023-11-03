@@ -8,7 +8,6 @@
     android:orientation="vertical"
     tools:context=".GameActivity">
 
-
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -63,18 +62,20 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal">
+
                 <Button
                     android:id="@+id/game_btn_new"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
                     android:layout_marginStart="5dp"
                     android:layout_marginTop="5dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/game_btn"
                     android:text="@string/game_btn_new"
                     android:textSize="20sp"
                     android:textStyle="bold"
-                    app:backgroundTint="@null"
-                    android:background="@drawable/game_btn"/>
+                    app:backgroundTint="@null" />
+
                 <Button
                     android:id="@+id/game_btn_undo"
                     android:layout_width="0dp"
@@ -192,5 +193,53 @@
                 tools:text="8"/>
         </TableRow>
     </TableLayout>
+
+    <LinearLayout
+        android:id="@+id/game_field_controls"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center">
+
+        <Button
+            android:id="@+id/game_btn_swipeLeft"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:text="◀"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            app:backgroundTint="@null"
+            android:background="@drawable/game_btn" />
+        <Button
+            android:id="@+id/game_btn_swipeRight"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:text="▶"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            app:backgroundTint="@null"
+            android:background="@drawable/game_btn"
+            android:layout_marginStart="5dp" />
+        <Button
+            android:id="@+id/game_btn_swipeUp"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:text="▲"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            app:backgroundTint="@null"
+            android:background="@drawable/game_btn"
+            android:layout_marginStart="5dp"/>
+        <Button
+            android:id="@+id/game_btn_swipeDown"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:text="▼"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            app:backgroundTint="@null"
+            android:background="@drawable/game_btn"
+            android:layout_marginStart="5dp"/>
+    </LinearLayout>
 
 </LinearLayout>

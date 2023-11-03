@@ -1,12 +1,17 @@
 package step.learning.androidspu121;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.content.SharedPreferences;
+import android.content.pm.ActivityInfo;
 import android.content.res.Resources;
 import android.media.MediaPlayer;
 import android.os.Bundle;
+import android.view.View;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
+import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TableLayout;
 import android.widget.TextView;
@@ -17,22 +22,40 @@ import java.util.List;
 import java.util.Random;
 
 public class GameActivity extends AppCompatActivity {
+    //region Variables
+    private final Random random = new Random();
     private static final int N = 4;     // Розмір поля
+    private AlertDialog activeDialog = null;
+    private SharedPreferences sharedPref;
+    SharedPreferences.Editor sharedPrefEditor;
+
     private int[][] cells = new int[N][N];
+    private List<int[][]> cellsHistory;
     private TextView[][] tvCells = new TextView[N][N];
+
+    private List<Integer> scoreHistory;
     private int score;
     private TextView tvScore;
     private int bestScore;
     private TextView tvBestScore;
-    private final Random random = new Random();
+
+    private Button btnUndo;
+
+    private String gameOverMessage;
+
     private Animation spawnCellAnimation;
     private Animation collapseCellAnimation;
     private MediaPlayer spawnSound;
+    //endregion
 
     @Override
     protected void onCreate( Bundle savedInstanceState ) {
         super.onCreate( savedInstanceState );
         setContentView( R.layout.activity_game );
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+
+        sharedPref = getApplicationContext().getSharedPreferences("HighScorePref", MODE_PRIVATE);
+        sharedPrefEditor = sharedPref.edit();
 
         spawnSound = MediaPlayer.create(
                 GameActivity.this,
@@ -50,10 +73,18 @@ public class GameActivity extends AppCompatActivity {
         collapseCellAnimation.reset();
 
 
+        btnUndo = findViewById(R.id.game_btn_undo);
+        btnUndo.setOnClickListener(this::btnUndoClick);
         tvScore = findViewById(R.id.game_tv_score);
         tvScore.setOnClickListener(v -> {moveLeft();spawnCell();showField();});
         tvBestScore = findViewById(R.id.game_tv_best);
 
+        if (sharedPref.contains("highScore")) {
+            bestScore = sharedPref.getInt("highScore", -1);
+        }
+        else {
+            bestScore = 0;
+        }
 
         // Пошук ідентифікаторів за іменем (String) та ресурсів через них
         for (int i = 0; i < N; i++) {
@@ -88,6 +119,11 @@ public class GameActivity extends AppCompatActivity {
         ) ;
 
 
+        findViewById(R.id.game_btn_swipeUp).setOnClickListener(view -> processMove(MoveDirection.TOP));
+        findViewById(R.id.game_btn_swipeDown).setOnClickListener(view -> processMove(MoveDirection.BOTTOM));
+        findViewById(R.id.game_btn_swipeLeft).setOnClickListener(view -> processMove(MoveDirection.LEFT));
+        findViewById(R.id.game_btn_swipeRight).setOnClickListener(view -> processMove(MoveDirection.RIGHT));
+
         findViewById( R.id.game_layout ).setOnTouchListener(
                 new OnSwipeListener( GameActivity.this ) {
                     @Override public void onSwipeBottom() {
@@ -98,7 +134,6 @@ public class GameActivity extends AppCompatActivity {
                     }
                     @Override public void onSwipeRight() {
                         processMove(MoveDirection.RIGHT);
-                        // Toast.makeText( GameActivity.this, "Ходу немає (->)", Toast.LENGTH_SHORT ).show();
                     }
                     @Override public void onSwipeTop() {
                         processMove(MoveDirection.TOP);
@@ -108,7 +143,13 @@ public class GameActivity extends AppCompatActivity {
         newGame();
     }
 
+
     private void newGame() {
+        score = 0;
+        tvScore.setText("0");
+
+        cellsHistory = new ArrayList<>();
+
         for (int i = 0; i < N; i++) {
             for (int j = 0; j < N; j++) {
                 cells[i][j] = 0;
@@ -116,6 +157,8 @@ public class GameActivity extends AppCompatActivity {
         }
         spawnCell();
         spawnCell();
+
+        cellsHistory.add(cells);
         showField();
     }
 
@@ -186,6 +229,121 @@ public class GameActivity extends AppCompatActivity {
         tvBestScore.setText(getString(R.string.game_tv_best, bestScore));
     }
 
+
+    private void gameOver() {
+        checkAndSetHighScore();
+
+        // Dialog
+        if (activeDialog != null && activeDialog.isShowing()) {
+            return;
+        }
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setMessage(gameOverMessage)
+                .setPositiveButton("Заново", (dialog, id) -> {
+                    newGame();
+                    dialog.dismiss();
+                })
+                .setNegativeButton("Вийти", (dialog, id) -> {
+                    finish();
+                });
+
+        builder.setCancelable(false);
+        activeDialog = builder.create();
+        activeDialog.show();
+    }
+
+    private boolean isGameOver() {
+        if (!canMove()) {
+            gameOverMessage = "Кінець гри! Рухи неможливі!";
+            return true;
+        }
+
+        for (int row = 0; row < N; row++) {
+            for (int col = 0; col < N; col++) {
+                if (cells[row][col] == 2048) {
+                    gameOverMessage = "Кінець гри! Виграш!";
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+
+    private void checkAndSetHighScore() {
+        if (score > bestScore) {
+            bestScore = score;
+
+            sharedPrefEditor.putInt("highScore", bestScore);
+            sharedPrefEditor.apply();
+
+            tvBestScore.setText(getString(R.string.game_tv_best, bestScore));
+        }
+    }
+
+
+    private void btnUndoClick(View view) {
+        showField();
+    }
+
+    //region Movement
+    private void processMove(MoveDirection direction) {
+        // Game Over
+        if (isGameOver()) {
+            gameOver();
+        }
+
+        if (canMove(direction)) {
+            move(direction);
+            spawnCell();
+            showField();
+        }
+        else {
+            Toast.makeText(GameActivity.this, "Ходу немає", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void move(MoveDirection direction) {
+        switch (direction) {
+            case BOTTOM:
+                moveDown();
+                break;
+            case LEFT:
+                moveLeft();
+                break;
+            case RIGHT:
+                moveRight();
+                break;
+            case TOP:
+                moveUp();
+                break;
+        }
+    }
+
+    private boolean canMove(MoveDirection direction) {
+        switch (direction) {
+            case BOTTOM:
+                return canMoveDown();
+            case LEFT:
+                return canMoveLeft();
+            case RIGHT:
+                return canMoveRight();
+            case TOP:
+                return canMoveUp();
+        }
+        return false;
+    }
+
+    private boolean canMove() {
+        if (!canMoveUp() && !canMoveDown() && !canMoveLeft() && !canMoveRight()) {
+            return false;
+        }
+        return true;
+    }
+
+
     private boolean canMoveLeft() {
         for (int i = 0; i < N; i++) {
             for (int j = 0; j < N - 1; j++) {
@@ -233,15 +391,15 @@ public class GameActivity extends AppCompatActivity {
                     cells[i][N - 1] = 0;
                 }
             }
-
         }
     }
+
 
     private boolean canMoveRight() {
         for (int i = 0; i < N; i++) {
             for (int j = 1; j < N; j++) {
                 if (cells[i][j] == 0 && cells[i][j - 1] != 0 ||
-                        cells[i][j] != 0 && cells[i][j] == cells[i][j - 1]) {
+                    cells[i][j] != 0 && cells[i][j] == cells[i][j - 1]) {
                     return true;
                 }
             }
@@ -280,51 +438,106 @@ public class GameActivity extends AppCompatActivity {
                     cells[i][0] = 0;
                 }
             }
-
         }
     }
 
-    private boolean canMove(MoveDirection direction) {
-        switch (direction) {
-            case BOTTOM:
-                return false;
-            case LEFT:
-                return canMoveLeft();
-            case RIGHT:
-                return canMoveRight();
-            case TOP:
-                return false;
+
+    private boolean canMoveUp() {
+        for (int col = 0; col < N; col++) {
+            for (int row = 0; row < N - 1; row++) {
+                if ((cells[row][col] == 0 && cells[row + 1][col] != 0) ||
+                    (cells[row][col] != 0 && cells[row][col] == cells[row + 1][col])) {
+                    return true;
+                }
+            }
         }
         return false;
     }
 
-    private void move(MoveDirection direction) {
-        switch (direction) {
-            case BOTTOM:
-                break;
-            case LEFT:
-                moveLeft();
-                break;
-            case RIGHT:
-                moveRight();
-                break;
-            case TOP:
-                break;
+    private void moveUp() {
+        for (int col = 0; col < N; col++) {
+            // 1. Up
+            boolean repeat;
+            do {
+                repeat = false;
+                for (int row = 0; row < N - 1; row++) {
+                    if (cells[row][col] == 0 && cells[row + 1][col] != 0) {
+                        cells[row][col] = cells[row + 1][col];
+                        cells[row + 1][col] = 0;
+                        repeat = true;
+                    }
+                }
+            } while (repeat);
+
+            // 2. Collapse
+            for (int row = 0; row < N - 1; row++) {
+                if (cells[row][col] != 0 && cells[row][col] == cells[row + 1][col]) {
+                    cells[row][col] += cells[row + 1][col];
+                    score += cells[row][col];
+                    tvCells[row][col].startAnimation(collapseCellAnimation);
+
+                    // 3. Переміщуємо на "злите" місце
+                    for (int k = row + 1; k < N - 1; k++) {
+                        cells[k][col] = cells[k + 1][col];
+                    }
+
+                    // занулюємо останню
+                    cells[N - 1][col] = 0;
+                }
+            }
         }
     }
 
-    private void processMove(MoveDirection direction) {
-        if (canMove(direction)) {
-            move(direction);
-            spawnCell();
-            showField();
+
+    private boolean canMoveDown() {
+        for (int col = 0; col < N; col++) {
+            for (int row = N - 1; row > 0; row--) {
+                if ((cells[row][col] == 0 && cells[row - 1][col] != 0) ||
+                    (cells[row][col] != 0 && cells[row][col] == cells[row - 1][col])) {
+                    return true;
+                }
+            }
         }
-        else {
-            Toast.makeText(GameActivity.this, "Ходу немає", Toast.LENGTH_SHORT).show();
+        return false;
+    }
+
+    private void moveDown() {
+        for (int col = 0; col < N; col++) {
+            // 1. Down
+            boolean repeat;
+            do {
+                repeat = false;
+                for (int row = N - 1; row > 0; row--) {
+                    if (cells[row][col] == 0 && cells[row - 1][col] != 0) {
+                        cells[row][col] = cells[row - 1][col];
+                        cells[row - 1][col] = 0;
+                        repeat = true;
+                    }
+                }
+            } while (repeat);
+
+            // 2. Collapse
+            for (int row = N - 1; row > 0; row--) {
+                if (cells[row][col] != 0 && cells[row][col] == cells[row - 1][col]) {
+                    cells[row][col] += cells[row - 1][col];
+                    score += cells[row][col];
+                    tvCells[row][col].startAnimation(collapseCellAnimation);
+
+                    // 3. Move to the "collapsed" position
+                    for (int k = row - 1; k > 0; k--) {
+                        cells[k][col] = cells[k - 1][col];
+                    }
+
+                    // Set the top cell to zero
+                    cells[0][col] = 0;
+                }
+            }
         }
     }
+
 
     private enum MoveDirection {
         BOTTOM, LEFT, RIGHT, TOP
     }
+    //endregion
 }
