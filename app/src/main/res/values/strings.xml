@@ -9,7 +9,7 @@
     <!-- Chat -->
     <string name="chat_tv_title">Комунікатор</string>
     <string name="chat_tv_nick">Нік у чаті:</string>
-    <string name="chat_et_nick">Kostya</string>
+    <string name="chat_et_nick">derpedcatto</string>
 
     <!-- 2048 -->
     <string name="game_tv_title">2048</string>
@@ -18,6 +18,10 @@
     <string name="game_tv_best">РЕКОРД\n%d</string>
     <string name="game_btn_new">НОВА</string>
     <string name="game_btn_undo">НАЗАД</string>
+    <string name="game_btn_swipeRight">ᐳ</string>
+    <string name="game_btn_swipeLeft">ᐸ</string>
+    <string name="game_btn_swipeUp">ᐱ</string>
+    <string name="game_btn_swipeDown">ᐯ</string>
 
     <!-- Calculator -->
     <string name="calc_title">Calculator</string>
