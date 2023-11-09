@@ -3,8 +3,11 @@ package step.learning.androidspu121;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.content.res.AppCompatResources;
 
+import android.content.Context;
+import android.graphics.Typeface;
 import android.media.MediaPlayer;
 import android.os.Bundle;
+import android.os.Handler;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
@@ -14,16 +17,23 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.google.gson.Gson;
 
 import java.io.ByteArrayOutputStream;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 
@@ -33,6 +43,7 @@ import step.learning.androidspu121.orm.ChatResponse;
 public class ChatActivity extends AppCompatActivity {
     private final static String chatHost = "https://chat.momentfor.fun";
     private final byte[] buffer = new byte[8192];
+    private final static String savesFilename = "saves.chat";
     private final Gson gson = new Gson();
     private final List<ChatMessage> chatMessages = new ArrayList<>();
     private EditText etNick;
@@ -41,6 +52,7 @@ public class ChatActivity extends AppCompatActivity {
     private LinearLayout llContainer;
     private Animation newMsgNotifAnimation;
     private MediaPlayer newMsgNotifSound;
+    private Handler handler;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -54,7 +66,21 @@ public class ChatActivity extends AppCompatActivity {
         etMessage = findViewById(R.id.chat_et_message);
         svContainer = findViewById(R.id.chat_sv_container);
         llContainer = findViewById(R.id.chat_ll_container);
-        findViewById(R.id.chat_btn_send).setOnClickListener(this::sendMessage);
+        findViewById(R.id.chat_btn_send).setOnClickListener(this::sendButtonClick);
+        findViewById(R.id.chat_btn_savenick).setOnClickListener(this::saveNickClick);
+
+        handler = new Handler();
+        handler.post(this::updateChat);
+        
+        if (!loadNick()) {
+            etNick.requestFocus();
+            Toast.makeText(this, "Виберіть собі нік", Toast.LENGTH_LONG).show();
+        }
+
+        /*
+        ??????
+         */
+        findViewById(R.id.tvMsgNotifUnreadCount).setVisibility(View.INVISIBLE);
 
         newMsgNotifSound = MediaPlayer.create(
                 ChatActivity.this,
@@ -66,19 +92,142 @@ public class ChatActivity extends AppCompatActivity {
         );
     }
 
+
+    private void updateChat() {
+        new Thread(this::loadChatMessages).start();
+        handler.postDelayed(this::updateChat, 3000);
+    }
+
+
+    private void saveNickClick(View view) {
+        String nick = etNick.getText().toString();
+        if (nick.isEmpty()) {
+            Toast.makeText(this, "Заповніть поле нікнейму", Toast.LENGTH_SHORT).show();
+            etNick.requestFocus();
+            return;
+        }
+        try (FileOutputStream writer = openFileOutput(savesFilename, Context.MODE_PRIVATE)) {
+            writer.write( nick.getBytes(StandardCharsets.UTF_8) );
+        }
+        catch (IOException ex) {
+            Log.e("saveNickClick", ex.getMessage());
+        }
+    }
+
+    private boolean loadNick() {
+        try (FileInputStream reader = openFileInput(savesFilename)) {
+            String nick = readString(reader);
+            if (nick.isEmpty()) {
+                return false;
+            }
+            etNick.setText(nick);
+            return true;
+        }
+        catch (IOException ex) {
+            Log.e("loadNickClick", ex.getMessage());
+            return false;
+        }
+    }
+
+    // TODO: merge with sendMessage()
+    private void sendButtonClick(View view) {
+        String nick = etNick.getText().toString();
+        String message = etMessage.getText().toString();
+
+        if (nick.isEmpty()) {
+            Toast.makeText(this, "Введіть нік", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (message.isEmpty()) {
+            Toast.makeText(this, "Введіть повідомлення", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        final ChatMessage chatMessage = new ChatMessage();
+        chatMessage.setAuthor(nick);
+        chatMessage.setText(message);
+
+        new Thread( () -> postChatMessage(chatMessage) ).start();
+    }
+
+    private void postChatMessage(ChatMessage chatMessage) {
+        try {
+            // POST повідомлення надсилається у декілька етапів
+            // 1. Налаштування з'єднання
+            URL url = new URL(chatHost);
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setDoOutput(true);   // У з'єднання можна писати (Output) - формувати тіло
+            connection.setDoInput(true);
+            connection.setRequestMethod("POST");
+            // Заголовки HTTP встановлюються як RequestProperty
+            connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+            connection.setRequestProperty("Accept", "*/*");
+            connection.setChunkedStreamingMode(0); // Не ділити на блоки - надсилати одним пакетом
+
+            // 2. Формуємо тіло запиту (пишемо Output)
+            OutputStream outputStream = connection.getOutputStream();
+
+            // author=Nick&msg=Message
+            // !! 2+2 -> &msg=2+2 --> 2 2 (+ в url це код пробіла)
+            // 2&2 --> author=Nick&msg=2&2 --> author=nick, msg=2, 2=null
+            // My %20 --> My [space] -- %20 код пробіла ==> перед надсиланням дані треба кодувати
+            String body = String.format("author=%s&msg=%s",
+                    URLEncoder.encode(chatMessage.getAuthor(), StandardCharsets.UTF_8.name()),
+                    URLEncoder.encode(chatMessage.getText()), StandardCharsets.UTF_8.name()
+            );
+            outputStream.write( body.getBytes(StandardCharsets.UTF_8) );
+            outputStream.flush();
+            outputStream.close();
+
+            // 3. Одержуємо відповідь, перевіряємо статус, за потреби читаємо тіло
+            int statusCode = connection.getResponseCode();
+            if (statusCode == 201) {    // у разі успіху приходить лише статус, тіла нема
+                Log.d("postChatMessage", "SENT OK");
+                new Thread(this::loadChatMessages).start();
+                runOnUiThread( () -> {
+                    etMessage.setText("");
+                    etMessage.requestFocus();
+                });
+            }
+            else {  // якщо не успіх, то повідомлення про помилку - у тілі
+                InputStream inputStream = connection.getInputStream();
+                String responseBody = readString( inputStream );
+                inputStream.close();
+                Log.e("postChatMessage", statusCode + " " + responseBody);
+            }
+
+            // 4. Закриваємо підключення, звільняємо ресурс
+            connection.disconnect();
+        }
+        catch (Exception ex) {
+            Log.e("postChatMessage", ex.getMessage());
+        }
+    }
+
+
+    private String readString(InputStream inputStream) throws IOException {
+        ByteArrayOutputStream builder = new ByteArrayOutputStream();
+        int bytesRead;
+        while ((bytesRead = inputStream.read(buffer)) > 0) {
+            builder.write(buffer, 0, bytesRead);
+        }
+
+        String result = builder.toString(StandardCharsets.UTF_8.name());
+        builder.close();
+        return result;
+    }
+
+
     private void loadChatMessages() {
         try {
             URL chatUrl = new URL(chatHost);
             InputStream chatStream = chatUrl.openStream();
+            String data = readString(chatStream);
 
-            ByteArrayOutputStream builder = new ByteArrayOutputStream();
-            int bytesRead;
-            while ((bytesRead = chatStream.read(buffer)) > 0) {
-                builder.write(buffer, 0, bytesRead);
-            }
-
-            String data = builder.toString(StandardCharsets.UTF_8.name());
             ChatResponse chatResponse = gson.fromJson(data, ChatResponse.class);
+            // Впорядковуємо відповідь - останні повідомлення "знизу", тобто за зростанням дати-часу
+            chatResponse.getData().sort(Comparator.comparing(ChatMessage::getMomentAsDate));
+
             boolean wasNewMessage = false;
             for (ChatMessage chatMessage : chatResponse.getData()) {
                 if (chatMessages.stream().noneMatch(m ->
@@ -92,7 +241,6 @@ public class ChatActivity extends AppCompatActivity {
                 runOnUiThread(this::showChatMessages);
             }
 
-            builder.close();
             chatStream.close();
         }
         catch (MalformedURLException e) {
@@ -110,13 +258,35 @@ public class ChatActivity extends AppCompatActivity {
     }
 
     private void showChatMessages() {
+        // додавання View вниз вимагає прокрутки контейнера
+        boolean needScroll = false;
+
         for (ChatMessage chatMessage : this.chatMessages) {
-            if (Objects.equals(chatMessage.getAuthor(), etNick.getText().toString())) {
-                llContainer.addView(createChatMessageView(chatMessage, true));
+            if (chatMessage.getView() == null) {
+                View messageView;
+                boolean isUserMsg;
+
+                if (Objects.equals(chatMessage.getAuthor(), etNick.getText().toString())) {
+                    isUserMsg = true;
+                }
+                else {
+                    isUserMsg = false;
+                }
+                messageView = createChatMessageView(chatMessage, isUserMsg);
+                chatMessage.setView(messageView);
+                llContainer.addView(messageView);
+
+                needScroll = true;
+                chatMessage.setView(messageView);
             }
-            else {
-                llContainer.addView(createChatMessageView(chatMessage, false));
-            }
+        }
+
+        if (needScroll) {
+            // Прокрутка контейнера (ScrollView) до самого нижнього положення.
+            // !! Але додавання елементів до контейнера у попередніх операціях (addView)
+            // ще не "відпрацьована" на UI - як елементи вони є, але їх розміри ще не прораховані.
+            // Команду прокрутки треба ставити у !чергу! за відображенням
+            svContainer.post( () -> svContainer.fullScroll(View.FOCUS_DOWN) );
         }
     }
 
@@ -161,7 +331,14 @@ public class ChatActivity extends AppCompatActivity {
         }
 
         TextView textView = new TextView(this);
+        textView.setText(chatMessage.getMoment());
+        textView.setTextSize(10);
+        textView.setTypeface(null, Typeface.ITALIC);
+        messageLayout.addView(textView);
+
+        textView = new TextView(this);
         textView.setText(chatMessage.getAuthor());
+        textView.setTypeface(null, Typeface.BOLD);
         messageLayout.addView(textView);
 
         textView = new TextView(this);
@@ -171,6 +348,30 @@ public class ChatActivity extends AppCompatActivity {
         return messageLayout;
     }
 
+
+
+    private void setNotificationState() {
+        TextView notifBubble = findViewById(R.id.tvMsgNotifUnreadCount);
+        int unreadMsgs = 0;
+
+        if ( ! chatMessages.get( chatMessages.size() - 1 ).getId().equals(lastChatMsgId)) {
+
+        }
+
+        if (unreadMsgs == 0) {
+            notifBubble.setVisibility(View.INVISIBLE);
+            return;
+        }
+
+        //runOnUiThread( () -> notifBubble.setText( ) );
+
+        notifBubble.startAnimation(newMsgNotifAnimation);
+        newMsgNotifSound.start();
+        notifBubble.setVisibility(View.VISIBLE);
+    }
+}
+
+/*
     private void sendMessage(View view) {
         TextView notifBubble = (TextView) findViewById(R.id.tvMsgNotifUnreadCount);
         int notifCounter = Integer.parseInt(notifBubble.getText().toString()) + 1;
@@ -178,7 +379,8 @@ public class ChatActivity extends AppCompatActivity {
         notifBubble.startAnimation(newMsgNotifAnimation);
         newMsgNotifSound.start();
     }
-}
+ */
+
 
 /*
 Робота з мережею Інтернет
@@ -198,4 +400,14 @@ public class ChatActivity extends AppCompatActivity {
 3. android.view.ViewRootImpl$CalledFromWrongThreadException: Only the original thread that created a view hierarchy can touch its views.
     Оскільки робота з мережею ведеться з окремого потоку, прямі звернення до
     елементів UI не дозволяються. Делегування запуску здійснюється методом 'runOnUiThread(...)'
+ */
+
+/*
+Періодичний запуск - особливості
+
+Є дві поширені схеми періодичного запуску - Таймер та Подійний цикл
+Таймер, як правило, створюється як окремий потік, який подає хроно-імпульси
+Подійний цикл використовує внутрішній цикл застосунку, плануючи відтермінований запуск.
+Для управління внутрішнім циклом використовують об'єкти типу Handler
+
  */
