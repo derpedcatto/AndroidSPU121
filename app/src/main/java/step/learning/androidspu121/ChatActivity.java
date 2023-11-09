@@ -354,9 +354,7 @@ public class ChatActivity extends AppCompatActivity {
         TextView notifBubble = findViewById(R.id.tvMsgNotifUnreadCount);
         int unreadMsgs = 0;
 
-        if ( ! chatMessages.get( chatMessages.size() - 1 ).getId().equals(lastChatMsgId)) {
 
-        }
 
         if (unreadMsgs == 0) {
             notifBubble.setVisibility(View.INVISIBLE);
