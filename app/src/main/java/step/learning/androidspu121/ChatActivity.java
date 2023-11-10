@@ -11,6 +11,7 @@ import android.os.Handler;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
+import android.view.ViewTreeObserver;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.widget.EditText;
@@ -77,10 +78,15 @@ public class ChatActivity extends AppCompatActivity {
             Toast.makeText(this, "Виберіть собі нік", Toast.LENGTH_LONG).show();
         }
 
-        /*
-        ??????
-         */
-        findViewById(R.id.tvMsgNotifUnreadCount).setVisibility(View.INVISIBLE);
+        findViewById(R.id.chat_sv_container).getViewTreeObserver().addOnScrollChangedListener(new ViewTreeObserver.OnScrollChangedListener() {
+            @Override
+            public void onScrollChanged() {
+                // Check if the user is at the bottom of the scroll view
+                if (isUserAtBottomOfChat( findViewById(R.id.chat_sv_container)) ) {
+                    setNotificationState(0);
+                }
+            }
+        });
 
         newMsgNotifSound = MediaPlayer.create(
                 ChatActivity.this,
@@ -129,7 +135,7 @@ public class ChatActivity extends AppCompatActivity {
         }
     }
 
-    // TODO: merge with sendMessage()
+
     private void sendButtonClick(View view) {
         String nick = etNick.getText().toString();
         String message = etMessage.getText().toString();
@@ -220,6 +226,7 @@ public class ChatActivity extends AppCompatActivity {
 
     private void loadChatMessages() {
         try {
+            int unreadMsgs = 0;
             URL chatUrl = new URL(chatHost);
             InputStream chatStream = chatUrl.openStream();
             String data = readString(chatStream);
@@ -228,16 +235,20 @@ public class ChatActivity extends AppCompatActivity {
             // Впорядковуємо відповідь - останні повідомлення "знизу", тобто за зростанням дати-часу
             chatResponse.getData().sort(Comparator.comparing(ChatMessage::getMomentAsDate));
 
-            boolean wasNewMessage = false;
             for (ChatMessage chatMessage : chatResponse.getData()) {
                 if (chatMessages.stream().noneMatch(m ->
                         m.getId().equals(chatMessage.getId()))
                 ) {
                     chatMessages.add(chatMessage);
-                    wasNewMessage = true;
+
+                    // Counter to new messages only by other users
+                    if ( ! chatMessage.getAuthor().equals( etNick.getText().toString() )) {
+                        unreadMsgs++;
+                    }
                 }
             }
-            if (wasNewMessage) {
+            if (unreadMsgs != 0) {
+                setNotificationState(unreadMsgs);
                 runOnUiThread(this::showChatMessages);
             }
 
@@ -286,7 +297,7 @@ public class ChatActivity extends AppCompatActivity {
             // !! Але додавання елементів до контейнера у попередніх операціях (addView)
             // ще не "відпрацьована" на UI - як елементи вони є, але їх розміри ще не прораховані.
             // Команду прокрутки треба ставити у !чергу! за відображенням
-            svContainer.post( () -> svContainer.fullScroll(View.FOCUS_DOWN) );
+            //svContainer.post( () -> svContainer.fullScroll(View.FOCUS_DOWN) );
         }
     }
 
@@ -350,24 +361,29 @@ public class ChatActivity extends AppCompatActivity {
 
 
 
-    private void setNotificationState() {
+    private void setNotificationState(int unreadMsgs) {
         TextView notifBubble = findViewById(R.id.tvMsgNotifUnreadCount);
-        int unreadMsgs = 0;
-
-
 
         if (unreadMsgs == 0) {
-            notifBubble.setVisibility(View.INVISIBLE);
-            return;
+            runOnUiThread( () -> notifBubble.setVisibility(View.INVISIBLE) );
         }
+        else {
+            runOnUiThread( () -> {
+                notifBubble.setText( String.valueOf(unreadMsgs) );
+                notifBubble.setVisibility(View.VISIBLE);
+            } );
 
-        //runOnUiThread( () -> notifBubble.setText( ) );
+            notifBubble.startAnimation(newMsgNotifAnimation);
+            newMsgNotifSound.start();
+        }
+    }
 
-        notifBubble.startAnimation(newMsgNotifAnimation);
-        newMsgNotifSound.start();
-        notifBubble.setVisibility(View.VISIBLE);
+
+    private boolean isUserAtBottomOfChat(ScrollView scrollView) {
+        return scrollView.getChildAt(0).getBottom() <= (scrollView.getHeight() + scrollView.getScrollY());
     }
 }
+
 
 /*
     private void sendMessage(View view) {
