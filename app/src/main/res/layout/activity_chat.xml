@@ -92,12 +92,13 @@
         android:id="@+id/chat_sv_container"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        app:layout_constraintHeight_percent="0.78"
-        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintBottom_toTopOf="@+id/chat_et_layout"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHeight_percent="0.78"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/linearLayout"
         app:layout_constraintVertical_bias="0.0">
+
         <LinearLayout
             android:id="@+id/chat_ll_container"
             android:layout_width="match_parent"
@@ -106,25 +107,29 @@
     </ScrollView>
 
     <LinearLayout
+        android:id="@+id/chat_et_layout"
         android:layout_width="match_parent"
-        android:layout_height="60dp"
+        android:layout_height="wrap_content"
         android:orientation="horizontal"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/chat_sv_container">
+        android:background="?android:attr/colorBackground">
+
         <EditText
             android:id="@+id/chat_et_message"
-            android:layout_height="match_parent"
             android:layout_width="0dp"
+            android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:textColor="?android:attr/textColorPrimary"
             android:text="Вітання!" />
+
         <ImageButton
             android:id="@+id/chat_btn_send"
             android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:src="@android:drawable/ic_menu_send"
-            android:scaleType="centerCrop" />
+            android:layout_height="wrap_content"
+            android:scaleType="centerCrop"
+            android:src="@android:drawable/ic_menu_send" />
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

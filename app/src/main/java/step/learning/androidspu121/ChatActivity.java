@@ -35,7 +35,9 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 import step.learning.androidspu121.orm.ChatMessage;
@@ -55,6 +57,11 @@ public class ChatActivity extends AppCompatActivity {
     private MediaPlayer newMsgNotifSound;
     private Handler handler;
 
+    private final Map<String,String> emoji = new HashMap<String, String>() { {
+        put(":)", new String(Character.toChars(0x1f600)));
+        put(":(", new String(Character.toChars(0x1f612)));
+    } };
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -69,6 +76,7 @@ public class ChatActivity extends AppCompatActivity {
         llContainer = findViewById(R.id.chat_ll_container);
         findViewById(R.id.chat_btn_send).setOnClickListener(this::sendButtonClick);
         findViewById(R.id.chat_btn_savenick).setOnClickListener(this::saveNickClick);
+        findViewById(R.id.msgNotifImageButton).setOnClickListener(this::msgNotifButtonClick);
 
         handler = new Handler();
         handler.post(this::updateChat);
@@ -96,6 +104,11 @@ public class ChatActivity extends AppCompatActivity {
                 ChatActivity.this,
                 R.anim.chat_notif_unread_pop
         );
+    }
+
+
+    private void msgNotifButtonClick(View view) {
+        svContainer.post( () -> svContainer.fullScroll(View.FOCUS_DOWN) );
     }
 
 
@@ -140,11 +153,11 @@ public class ChatActivity extends AppCompatActivity {
         String nick = etNick.getText().toString();
         String message = etMessage.getText().toString();
 
-        if (nick.isEmpty()) {
+        if (nick.trim().isEmpty()) {
             Toast.makeText(this, "Введіть нік", Toast.LENGTH_SHORT).show();
             return;
         }
-        if (message.isEmpty()) {
+        if (message.trim().isEmpty()) {
             Toast.makeText(this, "Введіть повідомлення", Toast.LENGTH_SHORT).show();
             return;
         }
@@ -297,7 +310,7 @@ public class ChatActivity extends AppCompatActivity {
             // !! Але додавання елементів до контейнера у попередніх операціях (addView)
             // ще не "відпрацьована" на UI - як елементи вони є, але їх розміри ще не прораховані.
             // Команду прокрутки треба ставити у !чергу! за відображенням
-            //svContainer.post( () -> svContainer.fullScroll(View.FOCUS_DOWN) );
+            // svContainer.post( () -> svContainer.fullScroll(View.FOCUS_DOWN) );
         }
     }
 
@@ -354,6 +367,11 @@ public class ChatActivity extends AppCompatActivity {
 
         textView = new TextView(this);
         textView.setText(chatMessage.getText());
+        // String emojiText = chatMessage.getText();
+        // for (String key : emoji.keySet()) {
+        //     emojiText = emojiText.replace(key, emoji.get(key));
+        // }
+        // textView.setText(emojiText);
         messageLayout.addView(textView);
 
         return messageLayout;
@@ -383,17 +401,6 @@ public class ChatActivity extends AppCompatActivity {
         return scrollView.getChildAt(0).getBottom() <= (scrollView.getHeight() + scrollView.getScrollY());
     }
 }
-
-
-/*
-    private void sendMessage(View view) {
-        TextView notifBubble = (TextView) findViewById(R.id.tvMsgNotifUnreadCount);
-        int notifCounter = Integer.parseInt(notifBubble.getText().toString()) + 1;
-        runOnUiThread(() -> notifBubble.setText(String.valueOf(notifCounter)));
-        notifBubble.startAnimation(newMsgNotifAnimation);
-        newMsgNotifSound.start();
-    }
- */
 
 
 /*
