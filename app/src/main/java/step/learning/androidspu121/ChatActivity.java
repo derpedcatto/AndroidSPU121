@@ -8,6 +8,7 @@ import android.graphics.Typeface;
 import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.os.Handler;
+import android.text.util.Linkify;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
@@ -15,12 +16,17 @@ import android.view.ViewTreeObserver;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.gson.Gson;
+import com.squareup.picasso.Callback;
+import com.squareup.picasso.Picasso;
+import com.vdurmont.emoji.EmojiManager;
+import com.vdurmont.emoji.EmojiParser;
 
 import java.io.ByteArrayOutputStream;
 import java.io.FileInputStream;
@@ -35,20 +41,22 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import step.learning.androidspu121.orm.ChatMessage;
 import step.learning.androidspu121.orm.ChatResponse;
 
 public class ChatActivity extends AppCompatActivity {
+    //region Variables
     private final static String chatHost = "https://chat.momentfor.fun";
     private final byte[] buffer = new byte[8192];
     private final static String savesFilename = "saves.chat";
     private final Gson gson = new Gson();
     private final List<ChatMessage> chatMessages = new ArrayList<>();
+    private List<String> nicknameHistory = new ArrayList<>();
     private EditText etNick;
     private EditText etMessage;
     private ScrollView svContainer;
@@ -56,11 +64,8 @@ public class ChatActivity extends AppCompatActivity {
     private Animation newMsgNotifAnimation;
     private MediaPlayer newMsgNotifSound;
     private Handler handler;
+    //endregion
 
-    private final Map<String,String> emoji = new HashMap<String, String>() { {
-        put(":)", new String(Character.toChars(0x1f600)));
-        put(":(", new String(Character.toChars(0x1f612)));
-    } };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -119,14 +124,40 @@ public class ChatActivity extends AppCompatActivity {
 
 
     private void saveNickClick(View view) {
-        String nick = etNick.getText().toString();
-        if (nick.isEmpty()) {
+        String newNick = etNick.getText().toString();
+        boolean isDuplicateNick = false;
+
+        if (newNick.trim().isEmpty()) {
             Toast.makeText(this, "Заповніть поле нікнейму", Toast.LENGTH_SHORT).show();
             etNick.requestFocus();
             return;
         }
+        for (ChatMessage msg : chatMessages) {
+            if (msg.getAuthor().equals(newNick)) {
+                boolean nickIsInHistory = false;
+
+                for (String previousNick : nicknameHistory) {
+                    if (msg.getAuthor().equals(previousNick)) {
+                        nickIsInHistory = true;
+                        break;
+                    }
+                }
+
+                if (! nickIsInHistory) {
+                    isDuplicateNick = true;
+                    break;
+                }
+            }
+            if (isDuplicateNick) break;
+        }
+        if (isDuplicateNick) {
+            Toast.makeText(this, "Користувач з таким ніком вже існує!", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        nicknameHistory.add(newNick);
         try (FileOutputStream writer = openFileOutput(savesFilename, Context.MODE_PRIVATE)) {
-            writer.write( nick.getBytes(StandardCharsets.UTF_8) );
+            writer.write( newNick.getBytes(StandardCharsets.UTF_8) );
         }
         catch (IOException ex) {
             Log.e("saveNickClick", ex.getMessage());
@@ -140,6 +171,7 @@ public class ChatActivity extends AppCompatActivity {
                 return false;
             }
             etNick.setText(nick);
+            nicknameHistory.add(nick);
             return true;
         }
         catch (IOException ex) {
@@ -192,7 +224,7 @@ public class ChatActivity extends AppCompatActivity {
             // My %20 --> My [space] -- %20 код пробіла ==> перед надсиланням дані треба кодувати
             String body = String.format("author=%s&msg=%s",
                     URLEncoder.encode(chatMessage.getAuthor(), StandardCharsets.UTF_8.name()),
-                    URLEncoder.encode(chatMessage.getText()), StandardCharsets.UTF_8.name()
+                    URLEncoder.encode( EmojiParser.parseToHtmlDecimal( chatMessage.getText() ) ), StandardCharsets.UTF_8.name()
             );
             outputStream.write( body.getBytes(StandardCharsets.UTF_8) );
             outputStream.flush();
@@ -310,6 +342,7 @@ public class ChatActivity extends AppCompatActivity {
             // !! Але додавання елементів до контейнера у попередніх операціях (addView)
             // ще не "відпрацьована" на UI - як елементи вони є, але їх розміри ще не прораховані.
             // Команду прокрутки треба ставити у !чергу! за відображенням
+
             // svContainer.post( () -> svContainer.fullScroll(View.FOCUS_DOWN) );
         }
     }
@@ -324,8 +357,6 @@ public class ChatActivity extends AppCompatActivity {
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
         );
-
-        layoutParams.setMargins(5, 5, 5, 5);
 
         if (isUserMessage) {
             layoutParams.gravity = Gravity.END;
@@ -343,16 +374,18 @@ public class ChatActivity extends AppCompatActivity {
             textView {Text}
         }
          */
-        messageLayout.setLayoutParams(layoutParams);
         messageLayout.setPadding(50, 25, 50, 25);
         messageLayout.setOrientation(LinearLayout.VERTICAL);
 
         if (isUserMessage) {
             messageLayout.setBackground(AppCompatResources.getDrawable(ChatActivity.this, R.drawable.chat_message_mine));
+            layoutParams.setMargins(100, 10, 10, 10);
         }
         else {
             messageLayout.setBackground(AppCompatResources.getDrawable(ChatActivity.this, R.drawable.chat_message_other));
+            layoutParams.setMargins(10, 10, 100, 10);
         }
+        messageLayout.setLayoutParams(layoutParams);
 
         TextView textView = new TextView(this);
         textView.setText(chatMessage.getMoment());
@@ -366,13 +399,27 @@ public class ChatActivity extends AppCompatActivity {
         messageLayout.addView(textView);
 
         textView = new TextView(this);
-        textView.setText(chatMessage.getText());
-        // String emojiText = chatMessage.getText();
-        // for (String key : emoji.keySet()) {
-        //     emojiText = emojiText.replace(key, emoji.get(key));
-        // }
-        // textView.setText(emojiText);
+        textView.setText( EmojiParser.parseToUnicode( chatMessage.getText() ) );
+        Linkify.addLinks(textView, Linkify.WEB_URLS);
         messageLayout.addView(textView);
+
+        ImageView imageView = new ImageView(this);
+        LinearLayout.LayoutParams layoutParamsImage = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.MATCH_PARENT
+        );
+        imageView.setLayoutParams(layoutParamsImage);
+        imageView.setPadding(0, 0, 0, 0);
+        Pattern urlPattern = Pattern.compile("(http)?s?:?(\\/\\/[^\"']*\\.(?:png|jpg|jpeg|gif|png|svg))");
+        Matcher matcher = urlPattern.matcher(textView.getText());
+        if (matcher.find()) {
+            String imageUrl = matcher.group();
+            Picasso.get().load(imageUrl).into(imageView);
+            messageLayout.addView(imageView);
+        }
+        else {
+            imageView.setImageDrawable(null);
+        }
 
         return messageLayout;
     }
